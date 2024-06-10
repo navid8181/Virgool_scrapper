@@ -29,11 +29,18 @@ def ScrapeData(userID, userType: UserType):
     # set cookie for verify captcha
     cookie = {
 
-        '__arcsjs': 'c2c5893857a5f46c508f8b14bf7a6c6a',
-        '_ga': 'GA1.1.562552015.1717925749',
-        '_ga_V1LLR5NWKW': 'GS1.1.1717932661.2.0.1717932661.0.0.0',
+        '__arcsrc': ''
     }
-
+    
+    if os.path.exists('cookie.json') :
+        myCookieFile = open('cookie.json')
+        dataCookie  = myCookieFile.read()
+        dataCookie = json.loads(dataCookie)
+  
+        if dataCookie['__arcsrc']  != "" :
+            cookie['__arcsrc'] = dataCookie['__arcsrc']
+        myCookieFile.close()
+     
     # userID = "hassan.sheikh7"
     currentIndexPage = 1
     # userType = UserType.following
@@ -48,9 +55,13 @@ def ScrapeData(userID, userType: UserType):
             header = fake_header.as_header_dict()
             url = getUrl(BASE_URL, userID, userType, currentIndexPage)
             r = requests.get(url, headers=header, cookies=cookie)
-
-            # get json Data
+            #check not error has been rise
             jsonData = r.json()
+        
+ 
+            if 'error' in jsonData :
+                raise Exception(jsonData['error'])
+            # get json Data
             data = jsonData['data']
 
             for d in data:
@@ -66,7 +77,7 @@ def ScrapeData(userID, userType: UserType):
             lastPage = int(lastPage)
 
             print(
-                f'Work-{(1.0*currentIndexPage/lastPage)* 100.0}% is complete')
+                f'Work- {(1.0*currentIndexPage/lastPage)* 100.0}% is complete')
 
             if currentIndexPage > lastPage:
                 break
@@ -74,15 +85,23 @@ def ScrapeData(userID, userType: UserType):
             currentIndexPage += 1
         except Exception as e:
             #enter captcha to scrape more data!
-            
+            print(e)
+            if str(e) == 'not_found':
+                raise Exception("user not found")
             print(url)
             print(
-                "please enter new __arcsrc cookie from link above after complete captcha :")
-            cookie['__arcsjs'] = input("enter __arcsjs : ")
+                "please enter new [__arcsrc] cookie from link above after complete captcha :")
+            cookie['__arcsrc'] = input("enter __arcsrc : ")
+            
+            cookieFile = open('cookie.json','w')
+            cookieFile.write(json.dumps(cookie))
+            cookieFile.close()
+            
+            
 
     jsonString = json.dumps([ob.__dict__ for ob in allData])
 
-    f = open(f'{userID}-{userType.name}.json', 'a')
+    f = open(f'{userID}-{userType.name}.json', 'w')
     f.write(jsonString)
     f.close()
 
